@@ -41,14 +41,19 @@ $result = $conn->query("SELECT b.*, u.name AS user_name, c.name AS chef_name
       </thead>
       <tbody>
         <?php while ($row = $result->fetch_assoc()): ?>
+          <?php
+            $event_datetime = $row['event_date'] . ' ' . $row['event_time'];
+            $now = date('Y-m-d H:i:s');
+            $is_completed = ($event_datetime < $now);
+          ?>
           <tr class="text-center border-b">
             <td><?= htmlspecialchars($row['user_name']) ?></td>
             <td><?= htmlspecialchars($row['chef_name']) ?></td>
             <td><?= $row['event_date'] ?></td>
             <td><?= $row['event_time'] ?></td>
             <td><?= htmlspecialchars($row['event_place']) ?></td>
-            <td class="<?= $row['status'] === 'canceled' ? 'text-red-600' : 'text-green-700' ?>">
-              <?= ucfirst($row['status']) ?>
+            <td class="<?= $is_completed ? 'text-gray-500' : ($row['status'] === 'canceled' ? 'text-red-600' : 'text-green-700') ?>">
+              <?= $is_completed ? 'Completed' : ucfirst($row['status']) ?>
             </td>
           </tr>
         <?php endwhile; ?>

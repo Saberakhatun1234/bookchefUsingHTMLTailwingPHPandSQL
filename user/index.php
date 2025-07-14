@@ -13,6 +13,20 @@ $isAdmin = $_SESSION['is_admin'] ?? 0;
 $result = $conn->query("SELECT * FROM chefs");
 ?>
 
+<?php
+// Fetch all bookings for chefs
+$bookings = [];
+$now = date('Y-m-d H:i:s');
+$booking_result = $conn->query("SELECT * FROM bookings WHERE payment_status IN ('pending', 'paid')");
+while ($row = $booking_result->fetch_assoc()) {
+    // Only consider future bookings for disabling
+    $event_datetime = $row['event_date'] . ' ' . $row['event_time'];
+    if ($event_datetime > $now) {
+        $bookings[$row['chef_id']][$row['user_id']] = $row;
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -54,8 +68,10 @@ $result = $conn->query("SELECT * FROM chefs");
           </span>
         </p>
 
-        <!-- Book Now Button -->
-        <?php if ($chef['is_available'] == 1): ?>
+        <!-- Booking Status -->
+        <?php if (isset($bookings[$chef['id']][$_SESSION['user_id']])): ?>
+          <button disabled class="mt-3 inline-block bg-yellow-500 text-white px-4 py-2 rounded cursor-not-allowed">Booked by you</button>
+        <?php elseif ($chef['is_available'] == 1): ?>
           <a href="book-chef.php?chef_id=<?= $chef['id'] ?>" 
              class="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Book Now

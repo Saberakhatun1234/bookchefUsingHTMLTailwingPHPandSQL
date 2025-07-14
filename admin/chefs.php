@@ -9,6 +9,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['is_admin'] != 1) {
 
 $chefs = $conn->query("SELECT * FROM chefs");
 
+// Fetch current bookings for all chefs
+$booking_map = [];
+$booking_result = $conn->query("SELECT b.*, u.name AS user_name FROM bookings b JOIN users u ON b.user_id = u.id WHERE b.payment_status IN ('pending', 'paid')");
+while ($row = $booking_result->fetch_assoc()) {
+    $booking_map[$row['chef_id']] = $row;
+}
+
 if (isset($_GET['delete'])) {
     $cid = intval($_GET['delete']);
     $conn->query("DELETE FROM chefs WHERE id = $cid");
@@ -43,6 +50,7 @@ if (isset($_GET['delete'])) {
           <th>Fees</th>
           <th>Picture</th>
           <th>Availability</th>
+          <th>Current Booking</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -61,6 +69,13 @@ if (isset($_GET['delete'])) {
               <a href="toggle-chef.php?id=<?= $chef['id'] ?>" class="text-blue-600 hover:underline text-sm">
                 Toggle
               </a>
+            </td>
+            <td>
+              <?php if (isset($booking_map[$chef['id']])): ?>
+                <span class="text-red-600 font-semibold">Booked by <?= htmlspecialchars($booking_map[$chef['id']]['user_name']) ?><br>on <?= $booking_map[$chef['id']]['event_date'] ?> at <?= $booking_map[$chef['id']]['event_time'] ?></span>
+              <?php else: ?>
+                <span class="text-green-700">Available</span>
+              <?php endif; ?>
             </td>
             <td>
               <a href="?delete=<?= $chef['id'] ?>" onclick="return confirm('Delete this chef?')" class="text-red-600 hover:underline">Delete</a>

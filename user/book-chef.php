@@ -35,22 +35,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_now'])) {
     
     // Parse datetime
     $datetime = new DateTime($event_datetime);
-    $event_date = $datetime->format('Y-m-d');
-    $event_time = $datetime->format('H:i:s');
-    
-    // Insert booking with pending payment status
-    $sql = "INSERT INTO bookings (user_id, chef_id, event_date, event_time, event_place, phone, fees, payment_status, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())";
-    
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iissssd", $user_id, $chef_id, $event_date, $event_time, $event_place, $phone, $chef['fees']);
-    
-    if ($stmt->execute()) {
-        $_SESSION['success'] = "Booking created successfully! You can pay later from your profile.";
-        header("Location: profile.php");
-        exit();
+    $now = new DateTime();
+    if ($datetime < $now) {
+        $error = "You cannot book a chef for a past date/time.";
     } else {
-        $error = "Error creating booking. Please try again.";
+        $event_date = $datetime->format('Y-m-d');
+        $event_time = $datetime->format('H:i:s');
+
+        // Check if chef is already booked for this date and time slot
+        $check_sql = "SELECT * FROM bookings WHERE chef_id = ? AND event_date = ? AND event_time = ? AND payment_status IN ('pending', 'paid')";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param("iss", $chef_id, $event_date, $event_time);
+        $check_stmt->execute();
+        $check_result = $check_stmt->get_result();
+        if ($check_result->num_rows > 0) {
+            $error = "Sorry, this chef is already booked for the selected date and time.";
+        } else {
+            // Insert booking with pending payment status
+            $sql = "INSERT INTO bookings (user_id, chef_id, event_date, event_time, event_place, phone, fees, payment_status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("iissssd", $user_id, $chef_id, $event_date, $event_time, $event_place, $phone, $chef['fees']);
+            if ($stmt->execute()) {
+                $_SESSION['success'] = "Booking created successfully! You can pay later from your profile.";
+                header("Location: profile.php");
+                exit();
+            } else {
+                $error = "Error creating booking. Please try again.";
+            }
+        }
     }
 }
 ?>
@@ -78,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_now'])) {
       <input type="hidden" name="fees" value="<?= $chef['fees'] ?>">
 
       <label class="block mb-1 font-medium">Event Date & Time</label>
-      <input type="datetime-local" name="event_datetime" required class="w-full mb-4 p-2 border rounded">
+      <input type="datetime-local" name="event_datetime" required class="w-full mb-4 p-2 border rounded" min="<?= date('Y-m-d\TH:i') ?>">
 
       <label class="block mb-1 font-medium">Event Place</label>
       <input type="text" name="event_place" placeholder="e.g. Purulia, West Bengal" required class="w-full mb-4 p-2 border rounded">
@@ -87,26 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_now'])) {
       <input type="text" name="phone" value="<?= $user['phone'] ?>" required class="w-full mb-4 p-2 border rounded">
 
       <div class="flex gap-4 justify-center">
-        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Pay and Continue</button>
+        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Pay and Book</button>
       </div>
     </form>
     
-    <div class="mt-6 border-t pt-6">
-      <form method="POST">
-        <label class="block mb-1 font-medium">Event Date & Time</label>
-        <input type="datetime-local" name="event_datetime" required class="w-full mb-4 p-2 border rounded">
-
-        <label class="block mb-1 font-medium">Event Place</label>
-        <input type="text" name="event_place" placeholder="e.g. Purulia, West Bengal" required class="w-full mb-4 p-2 border rounded">
-
-        <label class="block mb-1 font-medium">Phone Number</label>
-        <input type="text" name="phone" value="<?= $user['phone'] ?>" required class="w-full mb-4 p-2 border rounded">
-
-        <div class="flex gap-4 justify-center">
-          <button type="submit" name="book_now" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Book Now (Pay Later)</button>
-        </div>
-      </form>
-    </div>
   </div>
 
 </body>

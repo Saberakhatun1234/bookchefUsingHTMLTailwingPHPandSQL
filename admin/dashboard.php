@@ -29,6 +29,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['is_admin'] != 1) {
     <a href="chefs.php" class="bg-green-600 text-white p-6 rounded-lg text-center hover:bg-green-700">
       🍽️ Manage Chefs
     </a>
+    <a href="booking.php" class="bg-purple-600 text-white p-6 rounded-lg text-center hover:bg-purple-700">
+      📅 View Chef Bookings
+    </a>
   </main>
 
 </body>
